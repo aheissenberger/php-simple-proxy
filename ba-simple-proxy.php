@@ -2,11 +2,10 @@
 
 // Script: Simple PHP Proxy: Get external HTML, JSON and more!
 //
-// *Version: 1.6, Last updated: 1/24/2009*
+// *Version: 1.6.1, Last updated: 2013-2-18*
 // 
 // Project Home - http://benalman.com/projects/php-simple-proxy/
-// GitHub       - http://github.com/cowboy/php-simple-proxy/
-// Source       - http://github.com/cowboy/php-simple-proxy/raw/master/ba-simple-proxy.php
+// GitHub       - https://github.com/aheissenberger/php-simple-proxy.git
 // 
 // About: License
 // 
@@ -23,6 +22,8 @@
 // 
 // About: Release History
 // 
+// 1.6.1-(2013-2-18) fix handling POST Variables (use the same Content-Type,
+//        use RAW post data to fix converstion of "." in variable names to "_")
 // 1.6 - (1/24/2009) Now defaults to JSON mode, which can now be changed to
 //       native mode by specifying ?mode=native. Native and JSONP modes are
 //       disabled by default because of possible XSS vulnerability issues, but
@@ -137,7 +138,8 @@
 
 // Change these configuration options if needed, see above descriptions for info.
 $enable_jsonp    = false;
-$enable_native   = false;
+$enable_native   = true;
+//$valid_url_regex = '/https:\/\/docs.google.com\/a\/heissenberger.at\/forms\/.*/';
 $valid_url_regex = '/.*/';
 
 // ############################################################################
@@ -161,10 +163,14 @@ if ( !$url ) {
   
   if ( strtolower($_SERVER['REQUEST_METHOD']) == 'post' ) {
     curl_setopt( $ch, CURLOPT_POST, true );
-    curl_setopt( $ch, CURLOPT_POSTFIELDS, $_POST );
+    if (substr($_SERVER['CONTENT_TYPE'],0,19)=='multipart/form-data') {
+      curl_setopt( $ch, CURLOPT_POSTFIELDS, $_POST );
+    } else {
+      curl_setopt( $ch, CURLOPT_POSTFIELDS, file_get_contents("php://input") );
+    }
   }
   
-  if ( $_GET['send_cookies'] ) {
+  if ( @$_GET['send_cookies'] ) {
     $cookie = array();
     foreach ( $_COOKIE as $key => $value ) {
       $cookie[] = $key . '=' . $value;
@@ -180,6 +186,9 @@ if ( !$url ) {
   curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
   curl_setopt( $ch, CURLOPT_HEADER, true );
   curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+  curl_setopt( $ch, CURLOPT_PROXY, '192.168.0.134:8888' );
   
   curl_setopt( $ch, CURLOPT_USERAGENT, $_GET['user_agent'] ? $_GET['user_agent'] : $_SERVER['HTTP_USER_AGENT'] );
   
@@ -188,6 +197,11 @@ if ( !$url ) {
   $status = curl_getinfo( $ch );
   
   curl_close( $ch );
+}
+
+// not found
+if ($status['http_code'] == 0 || $status['http_code'] == 404){
+  header("Status: 404 Not Found");
 }
 
 // Split header text into an array.
@@ -232,7 +246,7 @@ if ( $_GET['mode'] == 'native' ) {
     $data['status'] = array();
     $data['status']['http_code'] = $status['http_code'];
   }
-  
+
   // Set the JSON data object contents, decoding it from JSON if possible.
   $decoded_json = json_decode( $contents );
   $data['contents'] = $decoded_json ? $decoded_json : $contents;
