@@ -139,8 +139,8 @@
 // Change these configuration options if needed, see above descriptions for info.
 $enable_jsonp    = false;
 $enable_native   = true;
-//$valid_url_regex = '/https:\/\/docs.google.com\/a\/heissenberger.at\/forms\/.*/';
 $valid_url_regex = '/.*/';
+$proxy_setup	 = ''; //'127.0.0.1:808';
 
 // ############################################################################
 
@@ -188,7 +188,7 @@ if ( !$url ) {
   curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
   curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-  curl_setopt( $ch, CURLOPT_PROXY, '192.168.0.134:8888' );
+  curl_setopt( $ch, CURLOPT_PROXY, $proxy_setup );
   
   curl_setopt( $ch, CURLOPT_USERAGENT, $_GET['user_agent'] ? $_GET['user_agent'] : $_SERVER['HTTP_USER_AGENT'] );
   
