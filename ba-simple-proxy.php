@@ -141,11 +141,13 @@ $enable_jsonp    = false;
 $enable_native   = true;
 $valid_url_regex = '/.*/';
 $proxy_setup     = ''; //'127.0.0.1:808';
+if(@file_exists('./config.php') ) {
+   include_once('./config.php');
+}
 
 // ############################################################################
 
 $url = $_GET['url'];
-
 if ( !$url ) {
   
   // Passed url not specified.
@@ -182,7 +184,10 @@ if ( !$url ) {
     
     curl_setopt( $ch, CURLOPT_COOKIE, $cookie );
   }
-  
+  if (isset($NeedAuth) && $NeedAuth) {
+    curl_setopt( $ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC );
+    curl_setopt($ch, CURLOPT_USERPWD, $ApiKey);
+  }
   curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
   curl_setopt( $ch, CURLOPT_HEADER, true );
   curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
