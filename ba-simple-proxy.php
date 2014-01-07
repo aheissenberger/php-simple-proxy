@@ -140,12 +140,14 @@
 $enable_jsonp    = false;
 $enable_native   = true;
 $valid_url_regex = '/.*/';
-$proxy_setup	 = ''; //'127.0.0.1:808';
+$proxy_setup     = ''; //'127.0.0.1:808';
+if(@file_exists('./config.php') ) {
+   include_once('./config.php');
+}
 
 // ############################################################################
 
 $url = $_GET['url'];
-
 if ( !$url ) {
   
   // Passed url not specified.
@@ -182,7 +184,10 @@ if ( !$url ) {
     
     curl_setopt( $ch, CURLOPT_COOKIE, $cookie );
   }
-  
+  if (isset($NeedAuth) && $NeedAuth) {
+    curl_setopt( $ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC );
+    curl_setopt($ch, CURLOPT_USERPWD, $ApiKey);
+  }
   curl_setopt( $ch, CURLOPT_FOLLOWLOCATION, true );
   curl_setopt( $ch, CURLOPT_HEADER, true );
   curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
@@ -190,7 +195,7 @@ if ( !$url ) {
 
   curl_setopt( $ch, CURLOPT_PROXY, $proxy_setup );
   
-  curl_setopt( $ch, CURLOPT_USERAGENT, $_GET['user_agent'] ? $_GET['user_agent'] : $_SERVER['HTTP_USER_AGENT'] );
+  curl_setopt( $ch, CURLOPT_USERAGENT, isset($_GET['user_agent']) ? $_GET['user_agent'] : $_SERVER['HTTP_USER_AGENT'] );
   
   list( $header, $contents ) = preg_split( '/([\r\n][\r\n])\\1/', curl_exec( $ch ), 2 );
   
@@ -207,7 +212,7 @@ if ($status['http_code'] == 0 || $status['http_code'] == 404){
 // Split header text into an array.
 $header_text = preg_split( '/[\r\n]+/', $header );
 
-if ( $_GET['mode'] == 'native' ) {
+if ( isset($_GET['mode']) && $_GET['mode'] == 'native' ) {
   if ( !$enable_native ) {
     $contents = 'ERROR: invalid mode';
     $status = array( 'http_code' => 'ERROR' );
@@ -228,7 +233,7 @@ if ( $_GET['mode'] == 'native' ) {
   $data = array();
   
   // Propagate all HTTP headers into the JSON data object.
-  if ( $_GET['full_headers'] ) {
+  if (isset($_GET['full_headers']) && $_GET['full_headers'] ) {
     $data['headers'] = array();
     
     foreach ( $header_text as $header ) {
@@ -240,7 +245,7 @@ if ( $_GET['mode'] == 'native' ) {
   }
   
   // Propagate all cURL request / response info to the JSON data object.
-  if ( $_GET['full_status'] ) {
+  if ( isset($_GET['full_status']) && $_GET['full_status'] ) {
     $data['status'] = $status;
   } else {
     $data['status'] = array();
@@ -252,7 +257,7 @@ if ( $_GET['mode'] == 'native' ) {
   $data['contents'] = $decoded_json ? $decoded_json : $contents;
   
   // Generate appropriate content-type header.
-  $is_xhr = strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+  $is_xhr = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
   header( 'Content-type: application/' . ( $is_xhr ? 'json' : 'x-javascript' ) );
   
   // Get JSONP callback.
